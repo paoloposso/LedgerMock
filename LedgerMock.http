@@ -1,0 +1,6 @@
+@LedgerMock_HostAddress = http://localhost:5287
+
+GET {{LedgerMock_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
