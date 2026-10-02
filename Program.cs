@@ -1,41 +1,40 @@
+using LedgerMock.Domain;
+using LedgerMock.Infrastructure;
+using LedgerMock.Workers;
+using Amazon.DynamoDBv2;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// 1. Setup AWS DynamoDB connection (Local for development, AWS Credential Chain for Production)
+if (builder.Environment.IsDevelopment())
+{
+    var dynamoDbConfig = new AmazonDynamoDBConfig { ServiceURL = "http://localhost:8000" };
+    builder.Services.AddSingleton<IAmazonDynamoDB>(new AmazonDynamoDBClient("dummy", "dummy", dynamoDbConfig));
+}
+else
+{
+    // Production/Staging: Picks up AWS credentials & region automatically (IAM Role, IRSA, ECS task role)
+    builder.Services.AddSingleton<IAmazonDynamoDB>(new AmazonDynamoDBClient());
+}
+
+builder.Services.AddSingleton<DynamoDbStore>();
+builder.Services.AddSingleton<ILedgerStore>(sp => sp.GetRequiredService<DynamoDbStore>());
+
+// 2. Setup our Mock Kafka (EventBus) and Worker
+builder.Services.AddSingleton<EventBus>();
+builder.Services.AddHostedService<NotificationWorker>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// 3. Ensure DynamoDB table is created automatically only during local development
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    using var scope = app.Services.CreateScope();
+    var store = scope.ServiceProvider.GetRequiredService<DynamoDbStore>();
+    await store.EnsureTableExistsAsync();
 }
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+// 4. Map Endpoints
+LedgerMock.Endpoints.MapLedgerEndpoints(app);
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

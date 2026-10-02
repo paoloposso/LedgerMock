@@ -1,8 +1,11 @@
-using System;
-
 namespace LedgerMock.Domain;
 
-public enum TransactionType { Deposit, Withdrawal, TransferIn, TransferOut }
+public enum TransactionType { 
+    Deposit, 
+    Withdrawal, 
+    TransferIn, 
+    TransferOut 
+}
 
 public record Transaction(
     string AccountId,

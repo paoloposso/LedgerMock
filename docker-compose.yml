@@ -6,3 +6,14 @@ services:
     ports:
       - "8000:8000"
     command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+
+  # This is the Web UI for DynamoDB Local
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    container_name: ledger-dynamodb-ui
+    ports:
+      - "8001:8001"
+    environment:
+      - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+    depends_on:
+      - dynamodb-local

@@ -16,10 +16,19 @@ This file (`AGENTS.md`) serves as the core rulebook for this project. Any AI age
 - **Append-Only:** We do not perform SQL-style `UPDATE` or `DELETE` operations on balances. 
 - **Event Reducers:** State is calculated by dynamically folding (reducing/aggregating) an immutable log of historical events using `IEnumerable.Aggregate`.
 
-## 3. Separation of Concerns
-- **Domain:** Contains absolutely zero infrastructure code (no AWS SDK, no HTTP contexts).
-- **Infrastructure:** `DynamoDbStore` is strictly for interacting with AWS.
+## 3. Separation of Concerns & Dependency Inversion
+- **Domain:** Contains absolutely zero infrastructure code (no AWS SDK, no HTTP contexts). Stores are abstracted via domain interfaces (`ILedgerStore`).
+- **Endpoints / Presentation:** Depend strictly on abstractions (`ILedgerStore`), never directly on concrete infrastructure classes (`DynamoDbStore`).
+- **Infrastructure:** `DynamoDbStore` implements `ILedgerStore` and is strictly for interacting with AWS.
 - **Event Bus:** Asynchronous pub/sub is managed strictly via `System.Threading.Channels`. The HTTP API must never wait for background side-effects (like notifications).
 
 ## 4. File Segregation
-- Keep classes and records segregated into their own files under their respective namespaces (e.g., `LedgerMock.Domain`). Do not dump everything into a single file.
+- Keep classes, interfaces, and records segregated into their own files under their respective namespaces (e.g., `LedgerMock.Domain`). Do not dump everything into a single file.
+
+## 5. High-Performance Logging (Strict)
+- **No String Interpolation:** Never use string interpolation (`$""`) inside logger methods. It violates CA1873 and breaks structured logging.
+- **Source Generators Required:** All logging must be done using the `[LoggerMessage]` attribute on `static partial` extension methods to guarantee zero-allocation performance. Do not use inline `if (_logger.IsEnabled(...))` boilerplate in the business logic.
+
+## 6. Modern C# Syntax & Collection Expressions
+- **Collection Expressions:** Always prefer C# 12+ collection expressions (`[...]`) over legacy collection initializers (`new List<T> { ... }`, `new T[] { ... }`).
+- **Explicit Element Types:** When initializing collections for SDK configurations, favor explicit element instantiation (`[ new KeySchemaElement(...) ]`) to maintain readability and avoid ambiguous target typing.

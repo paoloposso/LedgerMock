@@ -1,0 +1,19 @@
+# Build results
+bin/
+obj/
+TestResults/
+
+# Visual Studio / Rider / JetBrains
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Runtime log outputs
+*.jsonl
