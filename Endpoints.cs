@@ -7,43 +7,123 @@ public static class Endpoints
 {
     public static void MapLedgerEndpoints(WebApplication app)
     {
-        // POST: Trigger a new transaction
-        app.MapPost("/transfer", async (TransferRequest request, ILedgerStore store, EventBus eventBus) => 
+        // 1. POST: Deposit funds to an account
+        app.MapPost("/accounts/{id}/deposit", async (string id, DepositRequest request, ILedgerStore store, EventBus eventBus) =>
         {
             if (string.IsNullOrWhiteSpace(request.IdempotencyKey))
             {
-                return Results.BadRequest("IdempotencyKey is strictly required.");
+                return Results.BadRequest(new { error = "IdempotencyKey is strictly required." });
             }
 
-            var newFact = new Transaction(
-                request.AccountId, 
-                request.Amount, 
-                Enum.Parse<TransactionType>(request.Type, true), 
-                DateTimeOffset.UtcNow, 
-                request.IdempotencyKey 
-            );
-
-            // 1. I/O: Append to Store with strict Idempotency
-            var appendResult = await store.AppendTransactionAsync(newFact, request.IdempotencyKey);
-            if (appendResult == AppendResult.Duplicate)
+            if (request.Amount <= 0)
             {
-                // If store rejected it because the idempotency key already exists, safely return early!
-                return Results.Ok(new { message = "Transaction already processed successfully (Idempotent response)." });
+                return Results.BadRequest(new { error = "Amount must be greater than zero." });
             }
 
-            // 2. Event-Driven: Broadcast to "Kafka"
-            var domainEvent = new TransactionCompleted(
-                Guid.NewGuid().ToString(), 
-                newFact, 
-                DateTimeOffset.UtcNow
+            var tx = new Transaction(
+                id,
+                request.Amount,
+                TransactionType.Deposit,
+                DateTimeOffset.UtcNow,
+                request.IdempotencyKey
             );
-            await eventBus.PublishAsync(domainEvent);
-            
-            return Results.Ok(new { message = "Transaction processed!" });
+
+            var result = await store.AppendTransactionAsync(tx, request.IdempotencyKey);
+            if (result == AppendResult.Duplicate)
+            {
+                return Results.Ok(new { message = "Deposit already processed (Idempotent response)." });
+            }
+
+            await eventBus.PublishAsync(new TransactionCompleted(Guid.NewGuid().ToString(), tx, DateTimeOffset.UtcNow));
+            return Results.Ok(new { message = "Deposit processed successfully." });
         });
 
-        // GET: Calculate final balance based on Event Sourcing
-        app.MapGet("/account/{id}/balance", async (string id, ILedgerStore store) => 
+        // 2. POST: Withdraw funds from an account
+        app.MapPost("/accounts/{id}/withdraw", async (string id, WithdrawRequest request, ILedgerStore store, EventBus eventBus) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.IdempotencyKey))
+            {
+                return Results.BadRequest(new { error = "IdempotencyKey is strictly required." });
+            }
+
+            if (request.Amount <= 0)
+            {
+                return Results.BadRequest(new { error = "Amount must be greater than zero." });
+            }
+
+            var tx = new Transaction(
+                id,
+                request.Amount,
+                TransactionType.Withdrawal,
+                DateTimeOffset.UtcNow,
+                request.IdempotencyKey
+            );
+
+            var result = await store.AppendTransactionAsync(tx, request.IdempotencyKey);
+            if (result == AppendResult.Duplicate)
+            {
+                return Results.Ok(new { message = "Withdrawal already processed (Idempotent response)." });
+            }
+
+            await eventBus.PublishAsync(new TransactionCompleted(Guid.NewGuid().ToString(), tx, DateTimeOffset.UtcNow));
+            return Results.Ok(new { message = "Withdrawal processed successfully." });
+        });
+
+        // 3. POST: Atomic two-legged Transfer between two accounts
+        app.MapPost("/transfers", async (TransferRequest request, ILedgerStore store, EventBus eventBus) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.IdempotencyKey))
+            {
+                return Results.BadRequest(new { error = "IdempotencyKey is strictly required." });
+            }
+
+            if (request.Amount <= 0)
+            {
+                return Results.BadRequest(new { error = "Amount must be greater than zero." });
+            }
+
+            if (request.SourceAccountId == request.DestinationAccountId)
+            {
+                return Results.BadRequest(new { error = "Source and destination accounts must be different." });
+            }
+
+            var timestamp = DateTimeOffset.UtcNow;
+            var debitTx = new Transaction(
+                request.SourceAccountId,
+                request.Amount,
+                TransactionType.TransferOut,
+                timestamp,
+                $"{request.IdempotencyKey}-debit"
+            );
+
+            var creditTx = new Transaction(
+                request.DestinationAccountId,
+                request.Amount,
+                TransactionType.TransferIn,
+                timestamp,
+                $"{request.IdempotencyKey}-credit"
+            );
+
+            // ACID append: Debit leg + Credit leg + Idempotency lock committed simultaneously
+            var result = await store.AppendTransferAsync(debitTx, creditTx, request.IdempotencyKey);
+            if (result == AppendResult.Duplicate)
+            {
+                return Results.Ok(new { message = "Transfer already processed (Idempotent response)." });
+            }
+
+            await eventBus.PublishAsync(new TransferCompleted(
+                Guid.NewGuid().ToString(),
+                request.SourceAccountId,
+                request.DestinationAccountId,
+                request.Amount,
+                timestamp
+            ));
+
+            return Results.Ok(new { message = "Transfer processed atomically." });
+        });
+
+        // 4. GET: Calculate account balance via Event Sourcing fold
+        app.MapGet("/accounts/{id}/balance", async (string id, ILedgerStore store) =>
         {
             var history = await store.GetEventsAsync(id);
             var state = LedgerLogic.CalculateBalance(id, history);
@@ -52,5 +132,6 @@ public static class Endpoints
     }
 }
 
-// Added IdempotencyKey to the request payload
-public record TransferRequest(string AccountId, decimal Amount, string Type, string IdempotencyKey);
+public record DepositRequest(decimal Amount, string IdempotencyKey);
+public record WithdrawRequest(decimal Amount, string IdempotencyKey);
+public record TransferRequest(string SourceAccountId, string DestinationAccountId, decimal Amount, string IdempotencyKey);

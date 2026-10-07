@@ -102,6 +102,79 @@ public class DynamoDbStore(IAmazonDynamoDB dynamoDb) : ILedgerStore
         }
     }
 
+    // --- 2. ATOMIC DOUBLE-ENTRY TRANSFER (Debit + Credit + Idempotency Lock) ---
+    public async Task<AppendResult> AppendTransferAsync(Transaction debitTx, Transaction creditTx, string idempotencyKey)
+    {
+        var request = new TransactWriteItemsRequest
+        {
+            TransactItems = [
+                // Leg 1: Debit source account (TransferOut)
+                new()
+                {
+                    Put = new()
+                    {
+                        TableName = TableName,
+                        Item = new Dictionary<string, AttributeValue>
+                        {
+                            { "PK", new AttributeValue { S = $"ACCOUNT#{debitTx.AccountId}" } },
+                            { "SK", new AttributeValue { S = $"EVENT#{debitTx.Timestamp:O}#{debitTx.EventId}" } },
+                            { "GSI1PK", new AttributeValue { S = $"TYPE#{debitTx.Type}" } },
+                            { "AccountId", new AttributeValue { S = debitTx.AccountId } },
+                            { "Amount", new AttributeValue { N = debitTx.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture) } },
+                            { "Type", new AttributeValue { S = debitTx.Type.ToString() } },
+                            { "Timestamp", new AttributeValue { S = debitTx.Timestamp.ToString("O") } },
+                            { "EventId", new AttributeValue { S = debitTx.EventId } }
+                        }
+                    }
+                },
+                // Leg 2: Credit destination account (TransferIn)
+                new()
+                {
+                    Put = new()
+                    {
+                        TableName = TableName,
+                        Item = new Dictionary<string, AttributeValue>
+                        {
+                            { "PK", new AttributeValue { S = $"ACCOUNT#{creditTx.AccountId}" } },
+                            { "SK", new AttributeValue { S = $"EVENT#{creditTx.Timestamp:O}#{creditTx.EventId}" } },
+                            { "GSI1PK", new AttributeValue { S = $"TYPE#{creditTx.Type}" } },
+                            { "AccountId", new AttributeValue { S = creditTx.AccountId } },
+                            { "Amount", new AttributeValue { N = creditTx.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture) } },
+                            { "Type", new AttributeValue { S = creditTx.Type.ToString() } },
+                            { "Timestamp", new AttributeValue { S = creditTx.Timestamp.ToString("O") } },
+                            { "EventId", new AttributeValue { S = creditTx.EventId } }
+                        }
+                    }
+                },
+                // Leg 3: Idempotency Lock
+                new()
+                {
+                    Put = new()
+                    {
+                        TableName = TableName,
+                        Item = new()
+                        {
+                            { "PK", new AttributeValue { S = $"IDEMPOTENCY#{idempotencyKey}" } },
+                            { "SK", new AttributeValue { S = "LOCK" } },
+                            { "CreatedAt", new AttributeValue { S = DateTimeOffset.UtcNow.ToString("O") } }
+                        },
+                        ConditionExpression = "attribute_not_exists(PK)"
+                    }
+                }
+            ]
+        };
+
+        try
+        {
+            await dynamoDb.TransactWriteItemsAsync(request);
+            return AppendResult.Success;
+        }
+        catch (TransactionCanceledException ex) when (ex.CancellationReasons.Any(r => r.Code == "ConditionalCheckFailed"))
+        {
+            return AppendResult.Duplicate;
+        }
+    }
+
     // --- 2. FETCH HISTORY ---
     public async Task<List<Transaction>> GetEventsAsync(string accountId)
     {

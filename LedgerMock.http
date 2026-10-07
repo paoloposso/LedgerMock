@@ -1,6 +1,37 @@
 @LedgerMock_HostAddress = http://localhost:5287
+@IdempotencyKey = {{$guid}}
 
-GET {{LedgerMock_HostAddress}}/weatherforecast/
-Accept: application/json
+### 1. Deposit
+POST {{LedgerMock_HostAddress}}/accounts/acc-001/deposit
+Content-Type: application/json
 
-###
+{
+  "amount": 200.00,
+  "idempotencyKey": "{{IdempotencyKey}}"
+}
+
+### 2. Withdraw
+POST {{LedgerMock_HostAddress}}/accounts/acc-001/withdraw
+Content-Type: application/json
+
+{
+  "amount": 50.00,
+  "idempotencyKey": "{{IdempotencyKey}}"
+}
+
+### 3. Atomic Transfer between Account 1 and Account 2
+POST {{LedgerMock_HostAddress}}/transfers
+Content-Type: application/json
+
+{
+  "sourceAccountId": "acc-001",
+  "destinationAccountId": "acc-002",
+  "amount": 75.00,
+  "idempotencyKey": "{{IdempotencyKey}}"
+}
+
+### 4. Get Account 1 Balance
+GET {{LedgerMock_HostAddress}}/accounts/acc-001/balance
+
+### 5. Get Account 2 Balance
+GET {{LedgerMock_HostAddress}}/accounts/acc-002/balance

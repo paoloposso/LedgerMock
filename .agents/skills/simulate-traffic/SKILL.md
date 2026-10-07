@@ -17,20 +17,35 @@ You need three parameters from the user to run this skill:
 
 ## Execution Steps
 
-### Step 1: Execute Transfer
-Use your terminal tool to execute the following curl command, replacing the variables with the parameters:
+### Step 1: Execute Transaction
+Use your terminal tool to execute the appropriate curl command:
 
+**Deposit:**
 ```bash
-curl -s -X POST http://localhost:5000/transfer \
--H "Content-Type: application/json" \
--d '{"AccountId":"{accountId}", "Amount":{amount}, "Type":"{type}"}'
+curl -s -X POST http://localhost:5287/accounts/{accountId}/deposit \
+  -H "Content-Type: application/json" \
+  -d '{"amount": {amount}, "idempotencyKey": "{idempotencyKey}"}'
+```
+
+**Withdrawal:**
+```bash
+curl -s -X POST http://localhost:5287/accounts/{accountId}/withdraw \
+  -H "Content-Type: application/json" \
+  -d '{"amount": {amount}, "idempotencyKey": "{idempotencyKey}"}'
+```
+
+**Transfer:**
+```bash
+curl -s -X POST http://localhost:5287/transfers \
+  -H "Content-Type: application/json" \
+  -d '{"sourceAccountId": "{sourceAccountId}", "destinationAccountId": "{destinationAccountId}", "amount": {amount}, "idempotencyKey": "{idempotencyKey}"}'
 ```
 
 ### Step 2: Fetch Final Balance
-Use your terminal tool to query the ledger to ensure the Event Sourcing calculation worked:
+Query the ledger to verify the balance:
 
 ```bash
-curl -s http://localhost:5000/account/{accountId}/balance
+curl -s http://localhost:5287/accounts/{accountId}/balance
 ```
 
 Display the final JSON result to the user so they can verify the balance!

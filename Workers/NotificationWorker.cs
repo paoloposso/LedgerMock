@@ -32,6 +32,13 @@ public class NotificationWorker(EventBus eventBus, ILogger<NotificationWorker> l
                         txCompleted.Transaction.Type,
                         txCompleted.EventId);
                     break;
+                case TransferCompleted transferCompleted:
+                    logger.LogTransferCompleted(
+                        transferCompleted.SourceAccountId,
+                        transferCompleted.DestinationAccountId,
+                        transferCompleted.Amount,
+                        transferCompleted.EventId);
+                    break;
                 default:
                     logger.LogEventReceived(domainEvent.GetType().Name, domainEvent.EventId);
                     break;

@@ -6,7 +6,7 @@ using Amazon.DynamoDBv2;
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Setup AWS DynamoDB connection (Local for development, AWS Credential Chain for Production)
-if (builder.Environment.IsDevelopment())
+if (builder.Environment.IsDevelopment() || builder.Environment.EnvironmentName == "Testing")
 {
     var dynamoDbConfig = new AmazonDynamoDBConfig { ServiceURL = "http://localhost:8000" };
     builder.Services.AddSingleton<IAmazonDynamoDB>(new AmazonDynamoDBClient("dummy", "dummy", dynamoDbConfig));
@@ -38,3 +38,5 @@ if (app.Environment.IsDevelopment())
 LedgerMock.Endpoints.MapLedgerEndpoints(app);
 
 app.Run();
+
+public partial class Program { }
