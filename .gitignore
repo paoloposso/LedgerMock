@@ -17,3 +17,7 @@ Thumbs.db
 
 # Runtime log outputs
 *.jsonl
+
+# LSP / Linters
+.lsp/
+.clj-kondo/

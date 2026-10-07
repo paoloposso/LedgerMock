@@ -55,7 +55,7 @@ public class DynamoDbStore(IAmazonDynamoDB dynamoDb) : ILedgerStore
         {
             TransactItems = [
                 // Action 1: Write the actual ledger event
-                new()
+                new TransactWriteItem
                 {
                     Put = new()
                     {
@@ -74,12 +74,12 @@ public class DynamoDbStore(IAmazonDynamoDB dynamoDb) : ILedgerStore
                     }
                 },
                 // Action 2: Write the Idempotency Lock
-                new()
+                new TransactWriteItem
                 {
-                    Put = new()
+                    Put = new Put
                     {
                         TableName = TableName,
-                        Item = new()
+                        Item = new Dictionary<string, AttributeValue>
                         {
                             { "PK", new AttributeValue { S = $"IDEMPOTENCY#{idempotencyKey}" } },
                             { "SK", new AttributeValue { S = "LOCK" } },

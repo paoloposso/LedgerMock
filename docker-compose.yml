@@ -5,7 +5,10 @@ services:
     container_name: ledger-dynamodb
     ports:
       - "8000:8000"
-    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+    user: root
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
+    volumes:
+      - dynamodb-data:/home/dynamodblocal/data
 
   # This is the Web UI for DynamoDB Local
   dynamodb-admin:
@@ -17,3 +20,6 @@ services:
       - DYNAMO_ENDPOINT=http://dynamodb-local:8000
     depends_on:
       - dynamodb-local
+
+volumes:
+  dynamodb-data:
