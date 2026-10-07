@@ -15,14 +15,14 @@ public static class Endpoints
                 return Results.BadRequest(new { error = "IdempotencyKey is strictly required." });
             }
 
-            if (request.Amount <= 0)
+            if (request.AmountInCents <= 0)
             {
-                return Results.BadRequest(new { error = "Amount must be greater than zero." });
+                return Results.BadRequest(new { error = "AmountInCents must be greater than zero." });
             }
 
             var tx = new Transaction(
                 id,
-                request.Amount,
+                request.AmountInCents,
                 TransactionType.Deposit,
                 DateTimeOffset.UtcNow,
                 request.IdempotencyKey
@@ -46,14 +46,14 @@ public static class Endpoints
                 return Results.BadRequest(new { error = "IdempotencyKey is strictly required." });
             }
 
-            if (request.Amount <= 0)
+            if (request.AmountInCents <= 0)
             {
-                return Results.BadRequest(new { error = "Amount must be greater than zero." });
+                return Results.BadRequest(new { error = "AmountInCents must be greater than zero." });
             }
 
             var tx = new Transaction(
                 id,
-                request.Amount,
+                request.AmountInCents,
                 TransactionType.Withdrawal,
                 DateTimeOffset.UtcNow,
                 request.IdempotencyKey
@@ -77,9 +77,9 @@ public static class Endpoints
                 return Results.BadRequest(new { error = "IdempotencyKey is strictly required." });
             }
 
-            if (request.Amount <= 0)
+            if (request.AmountInCents <= 0)
             {
-                return Results.BadRequest(new { error = "Amount must be greater than zero." });
+                return Results.BadRequest(new { error = "AmountInCents must be greater than zero." });
             }
 
             if (request.SourceAccountId == request.DestinationAccountId)
@@ -90,7 +90,7 @@ public static class Endpoints
             var timestamp = DateTimeOffset.UtcNow;
             var debitTx = new Transaction(
                 request.SourceAccountId,
-                request.Amount,
+                request.AmountInCents,
                 TransactionType.TransferOut,
                 timestamp,
                 $"{request.IdempotencyKey}-debit"
@@ -98,7 +98,7 @@ public static class Endpoints
 
             var creditTx = new Transaction(
                 request.DestinationAccountId,
-                request.Amount,
+                request.AmountInCents,
                 TransactionType.TransferIn,
                 timestamp,
                 $"{request.IdempotencyKey}-credit"
@@ -115,7 +115,7 @@ public static class Endpoints
                 Guid.NewGuid().ToString(),
                 request.SourceAccountId,
                 request.DestinationAccountId,
-                request.Amount,
+                request.AmountInCents,
                 timestamp
             ));
 
@@ -132,6 +132,6 @@ public static class Endpoints
     }
 }
 
-public record DepositRequest(decimal Amount, string IdempotencyKey);
-public record WithdrawRequest(decimal Amount, string IdempotencyKey);
-public record TransferRequest(string SourceAccountId, string DestinationAccountId, decimal Amount, string IdempotencyKey);
+public record DepositRequest(long AmountInCents, string IdempotencyKey);
+public record WithdrawRequest(long AmountInCents, string IdempotencyKey);
+public record TransferRequest(string SourceAccountId, string DestinationAccountId, long AmountInCents, string IdempotencyKey);

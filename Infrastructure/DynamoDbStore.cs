@@ -66,7 +66,7 @@ public class DynamoDbStore(IAmazonDynamoDB dynamoDb) : ILedgerStore
                             { "SK", new AttributeValue { S = $"EVENT#{tx.Timestamp:O}#{tx.EventId}" } },
                             { "GSI1PK", new AttributeValue { S = $"TYPE#{tx.Type}" } },
                             { "AccountId", new AttributeValue { S = tx.AccountId } },
-                            { "Amount", new AttributeValue { N = tx.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture) } },
+                            { "AmountInCents", new AttributeValue { N = tx.AmountInCents.ToString() } },
                             { "Type", new AttributeValue { S = tx.Type.ToString() } },
                             { "Timestamp", new AttributeValue { S = tx.Timestamp.ToString("O") } },
                             { "EventId", new AttributeValue { S = tx.EventId } }
@@ -120,7 +120,7 @@ public class DynamoDbStore(IAmazonDynamoDB dynamoDb) : ILedgerStore
                             { "SK", new AttributeValue { S = $"EVENT#{debitTx.Timestamp:O}#{debitTx.EventId}" } },
                             { "GSI1PK", new AttributeValue { S = $"TYPE#{debitTx.Type}" } },
                             { "AccountId", new AttributeValue { S = debitTx.AccountId } },
-                            { "Amount", new AttributeValue { N = debitTx.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture) } },
+                            { "AmountInCents", new AttributeValue { N = debitTx.AmountInCents.ToString() } },
                             { "Type", new AttributeValue { S = debitTx.Type.ToString() } },
                             { "Timestamp", new AttributeValue { S = debitTx.Timestamp.ToString("O") } },
                             { "EventId", new AttributeValue { S = debitTx.EventId } }
@@ -139,7 +139,7 @@ public class DynamoDbStore(IAmazonDynamoDB dynamoDb) : ILedgerStore
                             { "SK", new AttributeValue { S = $"EVENT#{creditTx.Timestamp:O}#{creditTx.EventId}" } },
                             { "GSI1PK", new AttributeValue { S = $"TYPE#{creditTx.Type}" } },
                             { "AccountId", new AttributeValue { S = creditTx.AccountId } },
-                            { "Amount", new AttributeValue { N = creditTx.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture) } },
+                            { "AmountInCents", new AttributeValue { N = creditTx.AmountInCents.ToString() } },
                             { "Type", new AttributeValue { S = creditTx.Type.ToString() } },
                             { "Timestamp", new AttributeValue { S = creditTx.Timestamp.ToString("O") } },
                             { "EventId", new AttributeValue { S = creditTx.EventId } }
@@ -193,7 +193,7 @@ public class DynamoDbStore(IAmazonDynamoDB dynamoDb) : ILedgerStore
 
         return [..response.Items.Select(item => new Transaction(
             AccountId: item["AccountId"].S,
-            Amount: decimal.Parse(item["Amount"].N, System.Globalization.CultureInfo.InvariantCulture),
+            AmountInCents: long.Parse(item.TryGetValue("AmountInCents", out var val) ? val.N : item["Amount"].N),
             Type: Enum.Parse<TransactionType>(item["Type"].S),
             Timestamp: DateTimeOffset.Parse(item["Timestamp"].S),
             EventId: item["EventId"].S

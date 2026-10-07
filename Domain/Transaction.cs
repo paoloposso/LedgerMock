@@ -9,7 +9,7 @@ public enum TransactionType {
 
 public record Transaction(
     string AccountId,
-    decimal Amount,
+    long AmountInCents,
     TransactionType Type,
     DateTimeOffset Timestamp,
     string EventId

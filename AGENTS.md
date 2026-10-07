@@ -32,3 +32,8 @@ This file (`AGENTS.md`) serves as the core rulebook for this project. Any AI age
 ## 6. Modern C# Syntax & Collection Expressions
 - **Collection Expressions:** Always prefer C# 12+ collection expressions (`[...]`) over legacy collection initializers (`new List<T> { ... }`, `new T[] { ... }`).
 - **Explicit Element Types:** When initializing collections for SDK configurations, favor explicit element instantiation (`[ new KeySchemaElement(...) ]`) to maintain readability and avoid ambiguous target typing.
+
+## 7. Roadmap & Active Plans
+- Future architectural changes and implementation plans are stored in `.agents/plans/`.
+- Agents should inspect active plans before implementing cross-cutting refactors:
+  - Current plan: [`.agents/plans/cents-and-optimistic-locking.md`](.agents/plans/cents-and-optimistic-locking.md)

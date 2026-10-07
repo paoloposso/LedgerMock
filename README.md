@@ -29,13 +29,13 @@ dotnet test
 ## API & cURL Examples
 
 ### 1. Deposit Funds
-Credits a single account with funds.
+Credits a single account with funds (amount represented in cents / minor currency units).
 
 ```bash
 curl -X POST http://localhost:5287/accounts/acc-001/deposit \
   -H "Content-Type: application/json" \
   -d '{
-    "amount": 200.00,
+    "amountInCents": 20000,
     "idempotencyKey": "dep-001"
   }'
 ```
@@ -49,7 +49,7 @@ Debits a single account.
 curl -X POST http://localhost:5287/accounts/acc-001/withdraw \
   -H "Content-Type: application/json" \
   -d '{
-    "amount": 50.00,
+    "amountInCents": 5000,
     "idempotencyKey": "wd-001"
   }'
 ```
@@ -65,7 +65,7 @@ curl -X POST http://localhost:5287/transfers \
   -d '{
     "sourceAccountId": "acc-001",
     "destinationAccountId": "acc-002",
-    "amount": 60.00,
+    "amountInCents": 6000,
     "idempotencyKey": "txf-001"
   }'
 ```
@@ -76,12 +76,12 @@ curl -X POST http://localhost:5287/transfers \
 Calculates an account's current balance on the fly by reducing/aggregating all historical events (`IEnumerable.Aggregate`).
 
 ```bash
-# Check Source Account (acc-001) - Expected: 90.00
+# Check Source Account (acc-001) - Expected: 9000 cents ($90.00)
 curl -X GET http://localhost:5287/accounts/acc-001/balance
 ```
 
 ```bash
-# Check Destination Account (acc-002) - Expected: 60.00
+# Check Destination Account (acc-002) - Expected: 6000 cents ($60.00)
 curl -X GET http://localhost:5287/accounts/acc-002/balance
 ```
 
@@ -96,7 +96,7 @@ curl -X POST http://localhost:5287/transfers \
   -d '{
     "sourceAccountId": "acc-001",
     "destinationAccountId": "acc-002",
-    "amount": 60.00,
+    "amountInCents": 6000,
     "idempotencyKey": "txf-001"
   }'
 ```

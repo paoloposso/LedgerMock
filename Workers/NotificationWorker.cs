@@ -28,7 +28,7 @@ public class NotificationWorker(EventBus eventBus, ILogger<NotificationWorker> l
                 case TransactionCompleted txCompleted:
                     logger.LogTransactionCompleted(
                         txCompleted.Transaction.AccountId,
-                        txCompleted.Transaction.Amount,
+                        txCompleted.Transaction.AmountInCents,
                         txCompleted.Transaction.Type,
                         txCompleted.EventId);
                     break;
@@ -36,7 +36,7 @@ public class NotificationWorker(EventBus eventBus, ILogger<NotificationWorker> l
                     logger.LogTransferCompleted(
                         transferCompleted.SourceAccountId,
                         transferCompleted.DestinationAccountId,
-                        transferCompleted.Amount,
+                        transferCompleted.AmountInCents,
                         transferCompleted.EventId);
                     break;
                 default:

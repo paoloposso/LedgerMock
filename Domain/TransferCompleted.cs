@@ -4,6 +4,6 @@ public record TransferCompleted(
     string EventId,
     string SourceAccountId,
     string DestinationAccountId,
-    decimal Amount,
+    long AmountInCents,
     DateTimeOffset Timestamp
 ) : IDomainEvent;

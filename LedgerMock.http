@@ -6,7 +6,7 @@ POST {{LedgerMock_HostAddress}}/accounts/acc-001/deposit
 Content-Type: application/json
 
 {
-  "amount": 200.00,
+  "amountInCents": 20000,
   "idempotencyKey": "{{IdempotencyKey}}"
 }
 
@@ -15,7 +15,7 @@ POST {{LedgerMock_HostAddress}}/accounts/acc-001/withdraw
 Content-Type: application/json
 
 {
-  "amount": 50.00,
+  "amountInCents": 5000,
   "idempotencyKey": "{{IdempotencyKey}}"
 }
 
@@ -26,7 +26,7 @@ Content-Type: application/json
 {
   "sourceAccountId": "acc-001",
   "destinationAccountId": "acc-002",
-  "amount": 75.00,
+  "amountInCents": 7500,
   "idempotencyKey": "{{IdempotencyKey}}"
 }
 
